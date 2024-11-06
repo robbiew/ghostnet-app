@@ -51,12 +51,12 @@ Before running the application, you’ll need to create a settings.ini file in t
 ```bash
   ./ghostnet-app -path /path/to/door32sys_directory
 ```
-## Example
+## Example Menu (So far)
 ```
 Main Menu
 -------------------------
-1. Display Drop File Data
-2. Display Configuration & Check Access
+1. [DEBUG] Display Drop File Data
+2. [DEBUG] Display Configuration & Check Access
 Q. Quit
 
 Select an option:
