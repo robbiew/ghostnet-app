@@ -55,9 +55,16 @@ func promptInt(label string) int {
 	return input
 }
 
-// Save application data to a JSON file
+// Save application data to a JSON file in the "data" directory
 func saveApplication(data Application, filename string) error {
-	file, err := os.Create(filename)
+	// Create the "data" directory if it doesn't exist
+	if err := os.MkdirAll("data", os.ModePerm); err != nil {
+		return fmt.Errorf("could not create data directory: %w", err)
+	}
+
+	// Save file in "data" directory
+	filePath := fmt.Sprintf("data/%s", filename)
+	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("could not create file: %w", err)
 	}
