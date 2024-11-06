@@ -25,8 +25,8 @@
    ```
 2. Install the required dependencies:
   ```bash
-  go get github.com/eiannone/keyboard
-  go get gopkg.in/ini.v1
+   go get github.com/eiannone/keyboard
+   go get gopkg.in/ini.v1
   ```
 3. Build the application:
    ```bash
