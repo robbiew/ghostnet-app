@@ -18,17 +18,17 @@
 
 ## Installation
 
-1. Clone the repository:
+### Clone the repository:
    ```bash
    git clone https://github.com/yourusername/ghostnet-app.git
    cd ghostnet-app
    ```
-2. Install the required dependencies:
+### Install the required dependencies:
   ```bash
    go get github.com/eiannone/keyboard
    go get gopkg.in/ini.v1
   ```
-3. Build the application:
+### Build the application:
    ```bash
    go build -o ghostnet-app
    ```
