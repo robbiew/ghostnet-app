@@ -13,15 +13,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/eiannone/keyboard"
+	"gopkg.in/ini.v1"
 )
-
-// Struct for Drop File Data
-type DropFileData struct {
-	Alias     string
-	TimeLeft  int
-	Emulation int
-	NodeNum   int
-}
 
 // Struct for organizing all ANSI escape sequences
 type AnsiEscapes struct {
@@ -322,23 +315,46 @@ func GetDropFileData(path string) (DropFileData, error) {
 		return DropFileData{}, errors.New("drop file has insufficient lines")
 	}
 
-	timeLeft, err := strconv.Atoi(text[8])
-	if err != nil {
-		return DropFileData{}, fmt.Errorf("error converting time left to integer: %w", err)
-	}
-	emulation, err := strconv.Atoi(text[9])
-	if err != nil {
-		return DropFileData{}, fmt.Errorf("error converting emulation to integer: %w", err)
-	}
-	nodeNum, err := strconv.Atoi(text[10])
-	if err != nil {
-		return DropFileData{}, fmt.Errorf("error converting node number to integer: %w", err)
-	}
+	// Parse each line
+	commType, _ := strconv.Atoi(text[0])
+	commHandle, _ := strconv.Atoi(text[1])
+	baudRate, _ := strconv.Atoi(text[2])
+	bbsID := text[3]
+	userRecordPos, _ := strconv.Atoi(text[4])
+	realName := text[5]
+	alias := text[6]
+	securityLevel, _ := strconv.Atoi(text[7])
+	timeLeft, _ := strconv.Atoi(text[8])
+	emulation, _ := strconv.Atoi(text[9])
+	nodeNum, _ := strconv.Atoi(text[10])
 
 	return DropFileData{
-		Alias:     text[6],
-		TimeLeft:  timeLeft,
-		Emulation: emulation,
-		NodeNum:   nodeNum,
+		CommType:      commType,
+		CommHandle:    commHandle,
+		BaudRate:      baudRate,
+		BBSID:         bbsID,
+		UserRecordPos: userRecordPos,
+		RealName:      realName,
+		Alias:         alias,
+		SecurityLevel: securityLevel,
+		TimeLeft:      timeLeft,
+		Emulation:     emulation,
+		NodeNum:       nodeNum,
 	}, nil
+}
+
+// LoadConfig loads configuration from an ini file
+func LoadConfig(filePath string) (*Config, error) {
+	cfg, err := ini.Load(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ini file: %w", err)
+	}
+
+	config := &Config{
+		AdminSecurityLevel: cfg.Section("Settings").Key("AdminSecurityLevel").MustInt(255),
+		WWIVnet:            cfg.Section("Settings").Key("WWIVnet").MustBool(false),
+		FTN:                cfg.Section("Settings").Key("FTN").MustBool(false),
+	}
+
+	return config, nil
 }
