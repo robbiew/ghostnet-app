@@ -27,3 +27,7 @@ go.work.sum
 # data & directory (don't commit user data!)
 data/
 *.json
+
+# binary files
+bin/
+
