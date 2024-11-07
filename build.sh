@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This script is an example of how to build the application for a BBS pipeline
+# You'll need to EDIT this in order for it to work
 
 echo "Chekcking bin/ drirectory exists..."
 if [ ! -d "bin" ]; then
