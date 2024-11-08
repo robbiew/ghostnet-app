@@ -51,20 +51,11 @@ Before running the application, you’ll need to create a settings.ini file in t
 ```bash
   ./ghostnet-app -path /path/to/door32sys_directory
 ```
-## Example Menu (So far)
-```
-Main Menu
--------------------------
-1. [DEBUG] Display Drop File Data
-2. [DEBUG] Display Configuration & Check Access
-Q. Quit
 
-Select an option:
-```
 ## Typical Workflow for GHOSTnet Admins
 - Configuration Check: Ensure settings.ini has the correct settings for admin access and network options.
-- Review User Applications: View user details from DOOR32.SYS to assess applications.
-- Approve/Reject Applications: Based on the user's security level and other details, decide on application approvals.
+- Review User Applications
+- Approve/Reject Applications
 
 ## Contributing
 Contributions are welcome! Feel free to open issues or submit pull requests for feature requests, bug fixes, or improvements.
