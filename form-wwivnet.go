@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 )
 
-// Application struct to hold form data
 type Application struct {
 	Alias           string `json:"alias"`
 	Email           string `json:"email"`
@@ -21,49 +19,35 @@ type Application struct {
 	BBSSoftware     string `json:"bbs_software"`
 	BinkPort        int    `json:"bink_port"`
 	ApplicationDate string `json:"application_date"`
-	Approved        string `json:"approved"`      // "no" by default
+	Approved        string `json:"approved"`      // Default to "no"
 	DateApproved    string `json:"date_approved"` // Empty by default
 	LastEdited      string `json:"last_edited"`   // Empty by default
 }
 
-// Prompt user for input and ensure non-empty responses
-func prompt(label string) string {
-	var input string
-	for {
-		fmt.Printf("%s: ", label)
-		fmt.Scanln(&input)
-		input = strings.TrimSpace(input)
-		if input != "" {
-			break
-		}
-		fmt.Println("This field is required. Please enter a value.")
-	}
-	return input
-}
-
-// Prompt user for an integer input
-func promptInt(label string) int {
-	var input int
-	for {
-		fmt.Printf("%s: ", label)
-		_, err := fmt.Scanf("%d\n", &input)
-		if err == nil {
-			break
-		}
-		fmt.Println("Invalid input. Please enter a valid number.")
-	}
-	return input
-}
-
-// Save application data to a JSON file in the "data" directory
+// Save application data to JSON file
 func saveApplication(data Application, filename string) error {
-	// Create the "data" directory if it doesn't exist
 	if err := os.MkdirAll("data", os.ModePerm); err != nil {
 		return fmt.Errorf("could not create data directory: %w", err)
 	}
 
-	// Save file in "data" directory
 	filePath := fmt.Sprintf("data/%s", filename)
+	var applications []Application
+
+	if _, err := os.Stat(filePath); err == nil {
+		file, err := os.Open(filePath)
+		if err != nil {
+			return fmt.Errorf("could not open file: %w", err)
+		}
+		defer file.Close()
+
+		decoder := json.NewDecoder(file)
+		if err := decoder.Decode(&applications); err != nil {
+			return fmt.Errorf("could not decode existing data: %w", err)
+		}
+	}
+
+	applications = append(applications, data)
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("could not create file: %w", err)
@@ -72,43 +56,35 @@ func saveApplication(data Application, filename string) error {
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	err = encoder.Encode(data)
-	if err != nil {
-		return fmt.Errorf("could not encode data to JSON: %w", err)
-	}
-
-	return nil
+	return encoder.Encode(applications)
 }
 
 func app_wwiv() {
-	// Collect application data
-	fmt.Println("GHOSTnet WWIVnet Application Form")
-	fmt.Println("---------------------------------")
+	fmt.Print("GHOSTnet WWIVnet Application Form\r\n")
+	fmt.Print("---------------------------------\r\n")
 
 	application := Application{
-		Alias:           prompt("Alias, Name, or Handle"),
-		Email:           prompt("Email Address"),
-		Country:         prompt("Country"),
-		CityState:       prompt("City and State"),
-		AreaCode:        prompt("Telephone Area Code"),
-		BBSName:         prompt("BBS Name"),
-		BBSURL:          prompt("BBS URL"),
-		BBSPort:         promptInt("BBS Port Number"),
-		BBSSoftware:     prompt("BBS Software"),
-		BinkPort:        promptInt("Bink Port"),
+		Alias:           Prompt("\r\nAlias, Name, or Handle"),
+		Email:           Prompt("\r\nEmail Address"),
+		Country:         Prompt("\r\nCountry"),
+		CityState:       Prompt("\r\nCity and State"),
+		AreaCode:        Prompt("\r\nTelephone Area Code"),
+		BBSName:         Prompt("\r\nBBS Name"),
+		BBSURL:          Prompt("\r\nBBS URL"),
+		BBSPort:         PromptInt("\r\nBBS Port Number"),
+		BBSSoftware:     Prompt("\r\nBBS Software"),
+		BinkPort:        PromptInt("\r\nBink Port"),
 		ApplicationDate: time.Now().Format("2006-01-02"),
-		Approved:        "no", // Default to "no"
-		DateApproved:    "",   // Empty by default
-		LastEdited:      "",   // Empty by default
+		Approved:        "no",
+		DateApproved:    "",
+		LastEdited:      "",
 	}
 
-	// Save application data to JSON
 	filename := "GHOSTnet-WWIVnet-application.json"
 	err := saveApplication(application, filename)
 	if err != nil {
-		fmt.Printf("Error saving application: %v\n", err)
-		return
+		fmt.Printf("\r\nError saving application: %v\r\n", err)
+	} else {
+		fmt.Print("\r\nApplication saved successfully\r\n")
 	}
-
-	fmt.Printf("Application saved successfully to %s\n", filename)
 }

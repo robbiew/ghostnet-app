@@ -7,4 +7,8 @@ require (
 	gopkg.in/ini.v1 v1.67.0
 )
 
-require golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+require (
+	atomicgo.dev/keyboard v0.2.9 // indirect
+	github.com/containerd/console v1.0.3 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+)

@@ -2,17 +2,18 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
-	"github.com/eiannone/keyboard"
+	"atomicgo.dev/keyboard"
+	"atomicgo.dev/keyboard/keys"
 	"gopkg.in/ini.v1"
 )
 
@@ -174,106 +175,82 @@ const (
 // fmt.Println(ansi.Red + "This text is red" + ansi.Reset) // Print red text
 // fmt.Println(ansi.CursorHide)                            // Hides the cursor
 
-// GetKeyboardInput reads a single key press
+// GetKeyboardInput reads a single key press using atomicgo keyboard
 func GetKeyboardInput() (string, error) {
-	err := keyboard.Open()
-	if err != nil {
-		return "", err
-	}
-	defer keyboard.Close()
-
-	char, _, err := keyboard.GetSingleKey()
-	if err != nil {
-		return "", err
-	}
-
-	return string(char), nil
+	var input string
+	err := keyboard.Listen(func(key keys.Key) (stop bool, err error) {
+		input = key.String()
+		return true, nil
+	})
+	return input, err
 }
 
-// Pause waits for the user to press any key
+// Pause waits for any key press
 func Pause() {
-	fmt.Print("[ Press any key ]")
-	err := keyboard.Open()
-	if err != nil {
-		fmt.Printf("Error opening keyboard: %v\n", err)
-		return
-	}
-	defer keyboard.Close()
-
-	// Wait for a single key press
-	_, _, err = keyboard.GetSingleKey()
-	if err != nil {
-		fmt.Printf("Error reading key: %v\n", err)
-	}
+	fmt.Print("[ Press any key to continue ]")
+	_, _ = GetKeyboardInput()
 }
 
-// Move cursor to X, Y location
-func MoveCursor(x int, y int) {
-	fmt.Printf(Esc+"%d;%df", y, x)
-}
+// Prompt user for input using keyboard.Listen()
+func Prompt(label string) string {
+	fmt.Printf("%s: ", label)
+	var input strings.Builder
 
-// WaitForAnyKey waits for a user to press any key to continue.
-func WaitForAnyKey() error {
-	// Open the keyboard listener
-	err := keyboard.Open()
-	if err != nil {
-		return err
-	}
-	defer keyboard.Close() // Ensure that the keyboard listener is closed when done
-
-	// Wait for a single key press
-	_, _, err = keyboard.GetSingleKey()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Improved function to display ANSI file content
-func DisplayAnsiFile(filePath string, delay int, localDisplay bool) {
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("Error reading file %s: %v", filePath, err)
-	}
-	PrintAnsi(string(content), delay, localDisplay)
-}
-
-func PrintAnsi(content string, delay int, localDisplay bool) {
-	lines := strings.Split(content, "\r\n")
-	for _, line := range lines {
-		fmt.Println(line)
-		time.Sleep(time.Millisecond * time.Duration(delay))
-	}
-}
-
-// TrimStringFromSauce trims SAUCE metadata from a string.
-func TrimStringFromSauce(s string) string {
-	return trimMetadata(s, "COMNT", "SAUCE00")
-}
-
-// trimMetadata trims metadata based on delimiters.
-func trimMetadata(s string, delimiters ...string) string {
-	for _, delimiter := range delimiters {
-		if idx := strings.Index(s, delimiter); idx != -1 {
-			return trimLastChar(s[:idx])
+	err := keyboard.Listen(func(key keys.Key) (stop bool, err error) {
+		switch {
+		case key.Code == keys.Enter:
+			return true, nil
+		case key.Code == keys.Backspace:
+			if input.Len() > 0 {
+				inputStr := input.String()
+				input.Reset()
+				input.WriteString(inputStr[:len(inputStr)-1])
+				fmt.Print("\b \b")
+			}
+		case key.Code == keys.Space:
+			input.WriteString(" ")
+			fmt.Print(" ")
+		default:
+			input.WriteString(key.String())
+			fmt.Print(key.String())
 		}
+		return false, nil
+	})
+
+	if err != nil {
+		fmt.Printf("Error reading input: %v\n", err)
+		return ""
 	}
-	return s
+
+	return strings.TrimSpace(input.String())
 }
 
-// trimLastChar trims the last character from a string.
-func trimLastChar(s string) string {
-	if len(s) > 0 {
-		_, size := utf8.DecodeLastRuneInString(s)
-		return s[:len(s)-size]
+// PromptInt prompts the user for integer input
+func PromptInt(label string) int {
+	for {
+		inputStr := Prompt(label)
+		num, err := strconv.Atoi(inputStr)
+		if err == nil {
+			return num
+		}
+		fmt.Println("Invalid input. Please enter a valid number.")
 	}
-	return s
 }
 
-// Print text at an X, Y location
-func PrintStringLoc(text string, x int, y int) {
-	fmt.Fprintf(os.Stdout, Esc+strconv.Itoa(y)+";"+strconv.Itoa(x)+"f"+text)
+// LoadConfig loads configuration from an ini file
+func LoadConfig(filePath string) (*Config, error) {
+	cfg, err := ini.Load(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ini file: %w", err)
+	}
+
+	config := &Config{
+		AdminSecurityLevel: cfg.Section("Settings").Key("AdminSecurityLevel").MustInt(255),
+		WWIVnet:            cfg.Section("Settings").Key("WWIVnet").MustBool(false),
+		FTN:                cfg.Section("Settings").Key("FTN").MustBool(false),
+	}
+
+	return config, nil
 }
 
 // Finds the drop file in a case-insensitive way
@@ -343,18 +320,72 @@ func GetDropFileData(path string) (DropFileData, error) {
 	}, nil
 }
 
-// LoadConfig loads configuration from an ini file
-func LoadConfig(filePath string) (*Config, error) {
-	cfg, err := ini.Load(filePath)
+// Print text at a specific X, Y location (optional)
+func PrintStringLoc(text string, x int, y int) {
+	fmt.Fprintf(os.Stdout, "\033[%d;%df%s", y, x, text)
+}
+
+// TrimStringFromSauce removes metadata from strings
+func TrimStringFromSauce(s string) string {
+	return trimMetadata(s, "COMNT", "SAUCE00")
+}
+
+// Helper to trim metadata based on delimiters
+func trimMetadata(s string, delimiters ...string) string {
+	for _, delimiter := range delimiters {
+		if idx := strings.Index(s, delimiter); idx != -1 {
+			return trimLastChar(s[:idx])
+		}
+	}
+	return s
+}
+
+// trimLastChar trims the last character from a string
+func trimLastChar(s string) string {
+	if len(s) > 0 {
+		_, size := utf8.DecodeLastRuneInString(s)
+		return s[:len(s)-size]
+	}
+	return s
+}
+
+// SaveJSON appends a new application to the JSON file, maintaining existing data
+func SaveJSON(data interface{}, filename string) error {
+	var applications []Application
+
+	// Read existing applications if the file exists
+	if _, err := os.Stat(filename); err == nil {
+		file, err := os.Open(filename)
+		if err != nil {
+			return fmt.Errorf("could not open file: %w", err)
+		}
+		defer file.Close()
+
+		decoder := json.NewDecoder(file)
+		if err := decoder.Decode(&applications); err != nil && err != io.EOF {
+			return fmt.Errorf("could not decode existing data: %w", err)
+		}
+	}
+
+	// Append the new application (assuming data is of type Application)
+	if app, ok := data.(Application); ok {
+		applications = append(applications, app)
+	} else {
+		return fmt.Errorf("data is not of type Application")
+	}
+
+	// Write the updated applications list to the file
+	file, err := os.Create(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read ini file: %w", err)
+		return fmt.Errorf("could not create file: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(applications); err != nil {
+		return fmt.Errorf("could not encode data to JSON: %w", err)
 	}
 
-	config := &Config{
-		AdminSecurityLevel: cfg.Section("Settings").Key("AdminSecurityLevel").MustInt(255),
-		WWIVnet:            cfg.Section("Settings").Key("WWIVnet").MustBool(false),
-		FTN:                cfg.Section("Settings").Key("FTN").MustBool(false),
-	}
-
-	return config, nil
+	return nil
 }
