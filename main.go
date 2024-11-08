@@ -118,7 +118,7 @@ func main() {
 	// Load configuration
 	config, err := LoadConfig("config.ini")
 	if err != nil {
-		fmt.Printf("Error loading configuration: %v\n", err)
+		fmt.Printf("\r\nError loading configuration: %v\n", err)
 		os.Exit(1)
 	}
 

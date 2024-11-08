@@ -2,10 +2,8 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -187,7 +185,7 @@ func GetKeyboardInput() (string, error) {
 
 // Pause waits for any key press
 func Pause() {
-	fmt.Print("[ Press any key to continue ]")
+	fmt.Print("\r\n[ Press any key to continue ]")
 	_, _ = GetKeyboardInput()
 }
 
@@ -218,7 +216,7 @@ func Prompt(label string) string {
 	})
 
 	if err != nil {
-		fmt.Printf("Error reading input: %v\n", err)
+		fmt.Printf("\r\nError reading input: %v\n", err)
 		return ""
 	}
 
@@ -233,7 +231,7 @@ func PromptInt(label string) int {
 		if err == nil {
 			return num
 		}
-		fmt.Println("Invalid input. Please enter a valid number.")
+		fmt.Println("\r\nInvalid input. Please enter a valid number.")
 	}
 }
 
@@ -347,45 +345,4 @@ func trimLastChar(s string) string {
 		return s[:len(s)-size]
 	}
 	return s
-}
-
-// SaveJSON appends a new application to the JSON file, maintaining existing data
-func SaveJSON(data interface{}, filename string) error {
-	var applications []Application
-
-	// Read existing applications if the file exists
-	if _, err := os.Stat(filename); err == nil {
-		file, err := os.Open(filename)
-		if err != nil {
-			return fmt.Errorf("could not open file: %w", err)
-		}
-		defer file.Close()
-
-		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&applications); err != nil && err != io.EOF {
-			return fmt.Errorf("could not decode existing data: %w", err)
-		}
-	}
-
-	// Append the new application (assuming data is of type Application)
-	if app, ok := data.(Application); ok {
-		applications = append(applications, app)
-	} else {
-		return fmt.Errorf("data is not of type Application")
-	}
-
-	// Write the updated applications list to the file
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("could not create file: %w", err)
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(applications); err != nil {
-		return fmt.Errorf("could not encode data to JSON: %w", err)
-	}
-
-	return nil
 }

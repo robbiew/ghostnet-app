@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"time"
 )
@@ -24,39 +25,53 @@ type Application struct {
 	LastEdited      string `json:"last_edited"`   // Empty by default
 }
 
-// Save application data to JSON file
-func saveApplication(data Application, filename string) error {
+// SaveJSON appends a new application to the JSON file in the "data" directory
+func SaveJSON(data interface{}, filename string) error {
+	// Ensure the "data" directory exists
 	if err := os.MkdirAll("data", os.ModePerm); err != nil {
-		return fmt.Errorf("could not create data directory: %w", err)
+		return fmt.Errorf("\r\ncould not create data directory: %w", err)
 	}
 
+	// Set the file path to save within the "data" directory
 	filePath := fmt.Sprintf("data/%s", filename)
+
 	var applications []Application
 
+	// Read existing applications if the file exists
 	if _, err := os.Stat(filePath); err == nil {
 		file, err := os.Open(filePath)
 		if err != nil {
-			return fmt.Errorf("could not open file: %w", err)
+			return fmt.Errorf("\r\ncould not open file: %w", err)
 		}
 		defer file.Close()
 
 		decoder := json.NewDecoder(file)
-		if err := decoder.Decode(&applications); err != nil {
-			return fmt.Errorf("could not decode existing data: %w", err)
+		if err := decoder.Decode(&applications); err != nil && err != io.EOF {
+			return fmt.Errorf("\r\ncould not decode existing data: %w", err)
 		}
 	}
 
-	applications = append(applications, data)
+	// Append the new application (assuming data is of type Application)
+	if app, ok := data.(Application); ok {
+		applications = append(applications, app)
+	} else {
+		return fmt.Errorf("\r\ndata is not of type Application")
+	}
 
+	// Write the updated applications list to the file
 	file, err := os.Create(filePath)
 	if err != nil {
-		return fmt.Errorf("could not create file: %w", err)
+		return fmt.Errorf("\r\ncould not create file: %w", err)
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(applications)
+	if err := encoder.Encode(applications); err != nil {
+		return fmt.Errorf("\r\ncould not encode data to JSON: %w", err)
+	}
+
+	return nil
 }
 
 func app_wwiv() {
@@ -81,7 +96,7 @@ func app_wwiv() {
 	}
 
 	filename := "GHOSTnet-WWIVnet-application.json"
-	err := saveApplication(application, filename)
+	err := SaveJSON(application, filename)
 	if err != nil {
 		fmt.Printf("\r\nError saving application: %v\r\n", err)
 	} else {
